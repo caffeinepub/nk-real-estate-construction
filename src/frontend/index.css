@@ -1,0 +1,83 @@
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/assets/fonts/Fraunces.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Cabinet Grotesk';
+  src: url('/assets/fonts/CabinetGrotesk-Variable.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Earthy green + warm neutral palette */
+    --background: 0.97 0.005 95;
+    --foreground: 0.18 0.02 60;
+
+    --card: 0.99 0.003 90;
+    --card-foreground: 0.18 0.02 60;
+
+    --popover: 0.99 0.003 90;
+    --popover-foreground: 0.18 0.02 60;
+
+    /* Deep forest green */
+    --primary: 0.38 0.12 155;
+    --primary-foreground: 0.98 0.005 90;
+
+    /* Warm sand secondary */
+    --secondary: 0.92 0.025 85;
+    --secondary-foreground: 0.25 0.03 60;
+
+    --muted: 0.93 0.01 100;
+    --muted-foreground: 0.52 0.015 80;
+
+    /* Warm amber accent */
+    --accent: 0.75 0.15 75;
+    --accent-foreground: 0.15 0.02 50;
+
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.98 0.005 90;
+
+    --border: 0.88 0.015 100;
+    --input: 0.88 0.015 100;
+    --ring: 0.38 0.12 155;
+
+    --radius: 0.5rem;
+
+    --chart-1: 0.38 0.12 155;
+    --chart-2: 0.75 0.15 75;
+    --chart-3: 0.5 0.18 200;
+    --chart-4: 0.62 0.2 30;
+    --chart-5: 0.7 0.12 120;
+
+    --sidebar: 0.15 0.04 155;
+    --sidebar-foreground: 0.95 0.005 90;
+    --sidebar-primary: 0.55 0.15 155;
+    --sidebar-primary-foreground: 0.98 0.005 90;
+    --sidebar-accent: 0.22 0.05 155;
+    --sidebar-accent-foreground: 0.95 0.005 90;
+    --sidebar-border: 0.25 0.05 155;
+    --sidebar-ring: 0.55 0.15 155;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
