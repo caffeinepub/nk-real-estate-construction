@@ -37,7 +37,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ListingStatus,
   PropertyListing,
@@ -74,74 +74,67 @@ function AdminLoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [step, setStep] = useState<"password" | "awaiting_ii">("password");
+  const [awaitingII, setAwaitingII] = useState(false);
+
+  // Keep a ref to the password so the useEffect can read the latest value
+  const passwordRef = useRef(password);
+  passwordRef.current = password;
+
+  // After II login completes, identity + actor will update.
+  // This effect fires when both are available and we are waiting for them.
+  useEffect(() => {
+    if (!awaitingII || !identity || !actor) return;
+
+    const pw = passwordRef.current;
+    if (!pw) return;
+
+    setLoading(true);
+    setAwaitingII(false);
+
+    actor
+      .loginAsAdminWithPassword(pw)
+      .then(async (success) => {
+        if (success) {
+          await queryClient.invalidateQueries();
+        } else {
+          setError("Incorrect password. Please try again.");
+        }
+      })
+      .catch(() => {
+        setError("An error occurred. Please try again.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [awaitingII, identity, actor, queryClient]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) return;
     setError("");
 
-    // If not logged in with Internet Identity yet, trigger login first
-    if (!identity) {
-      setStep("awaiting_ii");
+    // If already logged in with Internet Identity, call backend directly
+    if (identity && actor) {
       setLoading(true);
       try {
-        await login();
+        const success = await actor.loginAsAdminWithPassword(password);
+        if (success) {
+          await queryClient.invalidateQueries();
+        } else {
+          setError("Incorrect password. Please try again.");
+        }
       } catch {
-        setError("Internet Identity login was cancelled. Please try again.");
-        setStep("password");
+        setError("An error occurred. Please try again.");
+      } finally {
         setLoading(false);
-        return;
       }
-      // After login, actor will update — but we can't await that here.
-      // The useEffect pattern below handles this.
       return;
     }
 
-    // Already logged in with II, call backend directly
-    if (!actor) return;
-    setLoading(true);
-    try {
-      const success = await actor.loginAsAdminWithPassword(password);
-      if (success) {
-        await queryClient.invalidateQueries();
-      } else {
-        setError("Incorrect password. Please try again.");
-      }
-    } catch {
-      setError("An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-      setStep("password");
-    }
+    // Not yet logged in with II — open popup; useEffect handles the rest
+    setAwaitingII(true);
+    login();
   };
-
-  // After II login completes, automatically call the backend
-  const handleIIComplete = async () => {
-    if (!actor || !password) return;
-    setLoading(true);
-    setError("");
-    try {
-      const success = await actor.loginAsAdminWithPassword(password);
-      if (success) {
-        await queryClient.invalidateQueries();
-      } else {
-        setError("Incorrect password. Please try again.");
-        setStep("password");
-      }
-    } catch {
-      setError("An error occurred. Please try again.");
-      setStep("password");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Watch for identity + actor becoming available after II login
-  // Using a simple effect via state change
-  if (step === "awaiting_ii" && identity && actor && !loading) {
-    handleIIComplete();
-  }
 
   return (
     <div className="container mx-auto px-4 py-20 flex justify-center">
@@ -170,7 +163,7 @@ function AdminLoginForm() {
                 placeholder="Enter admin password"
                 required
                 autoFocus
-                disabled={loading || isLoggingIn}
+                disabled={loading || isLoggingIn || awaitingII}
                 data-ocid="admin.password.input"
               />
             </div>
@@ -184,7 +177,7 @@ function AdminLoginForm() {
               </div>
             )}
 
-            {step === "awaiting_ii" && (
+            {awaitingII && (
               <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-primary">
                 Please complete Internet Identity login in the popup window...
               </div>
@@ -193,15 +186,13 @@ function AdminLoginForm() {
             <Button
               type="submit"
               className="w-full gap-2 bg-primary hover:bg-primary/90"
-              disabled={loading || isLoggingIn || !password}
+              disabled={loading || isLoggingIn || awaitingII || !password}
               data-ocid="admin.password.submit_button"
             >
-              {loading || isLoggingIn ? (
+              {loading || isLoggingIn || awaitingII ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {step === "awaiting_ii"
-                    ? "Waiting for login..."
-                    : "Verifying..."}
+                  {awaitingII ? "Waiting for login..." : "Verifying..."}
                 </>
               ) : (
                 "Login as Admin"
@@ -297,7 +288,6 @@ export default function AdminPage() {
     setDeleteTarget(null);
   };
 
-  // Show loading spinner only briefly while checking admin status
   if (adminLoading) {
     return (
       <div className="container mx-auto px-4 py-20 flex justify-center">
@@ -306,7 +296,6 @@ export default function AdminPage() {
     );
   }
 
-  // Not admin — show combined password + II login form
   if (!isAdmin) {
     return <AdminLoginForm />;
   }
@@ -563,7 +552,7 @@ export default function AdminPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Price (₹)</Label>
+                <Label>Price (Rs)</Label>
                 <Input
                   type="number"
                   value={form.price}

@@ -74,7 +74,7 @@ actor {
   let inquiryIdCounter = Map.empty<InquiryId, ()>();
 
   // Simple password-based admin login
-  stable var simpleAdminPassword : Text = "NKAdmin2024";
+  stable var simpleAdminPassword : Text = "NK@2026";
 
   public shared ({ caller }) func loginAsAdminWithPassword(password : Text) : async Bool {
     if (caller.isAnonymous()) { return false };
